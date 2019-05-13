@@ -6,18 +6,36 @@ import face_recognition
 from time import sleep
 
 def initData(name):
-    print("Capture Face and Dataset")
+    """[summary]
+    This func capture your face in webcam and save for dataset 
+    Arguments:
+        name {[str]} -- [name is user, showing on cam and folder name in training directory]
+    
+    Returns:
+        [None] -- [Void]
+    """
     video_capture = cv2.VideoCapture(0)
-    count = 1
+    count = 1 # data count
 
     def new_train_dir(name):
+        """[summary]
+        
+        Arguments:
+            name {[str]} -- [for folder name]
+        
+        Returns:
+            [str] -- [your dataset folder path in training directory]
+        """
         dir_path = os.path.join("knn_examples/train/",name)
         try:
             os.mkdir(dir_path)
+            return dir_path
         except OSError:
             print("Folder exists or Error!")
+            return dir_path
         else:
             print("created")
+            return dir_path
             
     while count < 10:
         ret, frame = video_capture.read()
@@ -26,9 +44,8 @@ def initData(name):
         cv2.imshow('Video', frame)
         sleep(1)
 
-        new_train_dir(name)
-        cv2.imwrite("G:/Python/face_reco/knn_examples/train/" +
-                    name+"/"+name+str(count)+".jpg", frame)
+        dir_path = new_train_dir(name)
+        cv2.imwrite(dir_path +"/"+name+str(count)+".jpg", frame)
         count += 1
 
         if cv2.waitKey(1) & 0xFF == ord('q'):
@@ -39,7 +56,17 @@ def initData(name):
 
 
 def detect_face(knn=None, m_path=None):
-    print("Recognition face...")
+    """[summary]
+    Capture your face in real time with webcam
+    and starting classification knn algorithm
+
+    if find your face 
+        show in rectangle with your name  
+    
+    Keyword Arguments:
+        knn {[knn]} -- [knn algorithm] (default: {None})
+        m_path {[str]} -- [model path] (default: {None})
+    """
     # Initialize some variables
     video_capture = cv2.VideoCapture(0)
     face_locations = []
@@ -63,8 +90,7 @@ def detect_face(knn=None, m_path=None):
             face_encodings = face_recognition.face_encodings(
                 rgb_small_frame, face_locations)
 
-        predictions = knn_classifier.predict(
-            face_encodings, face_locations, knn_clf=knn, model_path=m_path)
+        predictions = knn_classifier.predict(face_encodings, face_locations, knn_clf=knn, model_path=m_path)
 
         process_this_frame = not process_this_frame
 
@@ -97,12 +123,25 @@ def detect_face(knn=None, m_path=None):
     video_capture.release()
     cv2.destroyAllWindows()
 
-
-def recognition():
-    exampFace.init("cevat.jpg")
-
+'''
+def recognition(image_path):
+    """[summary]
+    default funcs in face_recognition lib
+    Arguments:
+        image_path {[str]} -- []
+    """
+    exampFace.init(image_path)
+'''
 
 if __name__ == "__main__":
-    initData("Cevat")
-    classifier = knn_classifier.train("knn_examples/train", model_save_path="trained_knn_model.clf", n_neighbors=2)
+    ## init ##
+    name = "your name"
+    train_dir_path = "knn_examples/train"
+
+    initData(name) 
+
+    """
+    Trains a k-nearest neighbors classifier for face recognition.
+    """
+    classifier = knn_classifier.train(train_dir_path, model_save_path="trained_knn_model.clf", n_neighbors=2)
     detect_face(m_path="trained_knn_model.clf")
