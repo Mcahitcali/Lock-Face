@@ -1,25 +1,25 @@
 import cv2, os
 import knn_classifier
-import exampFace
 import pickle
 import face_recognition
+import ctypes
+import keyboard
 from time import sleep
 
+count_frame = 0
+lock_state = False
 def initData(name):
-    """[summary]
-    This func capture your face in webcam and save for dataset 
-    Arguments:
-        name {[str]} -- [name is user, showing on cam and folder name in training directory]
-    
-    Returns:
-        [None] -- [Void]
-    """
+    #* This func capture your face in webcam and save for dataset 
+    # Arguments:
+        #* name {[str]} -- [name is user, showing on cam and folder name in training directory]
+    # 
+    # Returns:
+        # [None] -- [Void]
     video_capture = cv2.VideoCapture(0)
     count = 1 # data count
 
     def new_train_dir(name):
-        """[summary]
-        
+        """ 
         Arguments:
             name {[str]} -- [for folder name]
         
@@ -54,9 +54,8 @@ def initData(name):
     video_capture.release()
     cv2.destroyAllWindows()
 
-
 def detect_face(knn=None, m_path=None):
-    """[summary]
+    '''
     Capture your face in real time with webcam
     and starting classification knn algorithm
 
@@ -66,12 +65,14 @@ def detect_face(knn=None, m_path=None):
     Keyword Arguments:
         knn {[knn]} -- [knn algorithm] (default: {None})
         m_path {[str]} -- [model path] (default: {None})
-    """
+    '''
     # Initialize some variables
     video_capture = cv2.VideoCapture(0)
     face_locations = []
     face_encodings = []
     process_this_frame = True
+    global count_frame
+    global lock_state
 
     while True:
         # Grab a single frame of video
@@ -94,6 +95,12 @@ def detect_face(knn=None, m_path=None):
 
         process_this_frame = not process_this_frame
 
+        if not predictions:
+            print("Err!")
+            lock()
+            count_frame += 1
+            continue
+
         # Display the results
         for name, (top, right, bottom, left) in predictions:
             # Scale back up face locations since the frame we detected in was scaled to 1/4 size
@@ -112,8 +119,18 @@ def detect_face(knn=None, m_path=None):
             cv2.putText(frame, name, (left + 6, bottom - 6),
                         font, 1.0, (255, 255, 255), 1)
 
+            if "mucahit" not in name:
+                print("Not detect!")
+                lock()
+                count_frame += 1
+            else:
+                count_frame = 0
+                if lock_state:
+                    unlock()
+
         # Display the resulting image
-        cv2.imshow('Video', frame)
+        # cv2.imshow('Video', frame)
+        sleep(1)
 
         # Hit 'q' on the keyboard to quit!
         if cv2.waitKey(1) & 0xFF == ord('q'):
@@ -125,23 +142,37 @@ def detect_face(knn=None, m_path=None):
 
 '''
 def recognition(image_path):
-    """[summary]
-    default funcs in face_recognition lib
+    """ default funcs in face_recognition lib
     Arguments:
         image_path {[str]} -- []
     """
     exampFace.init(image_path)
 '''
 
+def lock():
+    global count_frame
+    global lock_state
+    print("Count: {}".format(count_frame))
+    
+    if count_frame == 5:
+        count_frame = 0
+        lock_state = True
+        ctypes.windll.user32.LockWorkStation()
+
+def unlock():
+    #!FIX ME
+    #! Dont work with password or PIN
+    keyboard.press_and_release("enter")
+    sleep(1)
+    keyboard.press_and_release("enter")
+
 if __name__ == "__main__":
     ## init ##
     name = "your name"
     train_dir_path = "knn_examples/train"
 
-    initData(name) 
-
-    """
-    Trains a k-nearest neighbors classifier for face recognition.
-    """
+    initData(name) #Create face dataset for train 
+    
+    # Trains a k-nearest neighbors classifier for face recognition.
     classifier = knn_classifier.train(train_dir_path, model_save_path="trained_knn_model.clf", n_neighbors=2)
     detect_face(m_path="trained_knn_model.clf")
